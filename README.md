@@ -54,7 +54,7 @@ DeviceFileEvents
 | order by TimeGenerated asc
 ```
 <br>
-<img width="1510" height="450" alt="image" src="https://github.com/user-attachments/assets/57de01b3-7fae-495c-a643-c015177900da" /> <br><br>
+<img width="1292" height="120" alt="image" src="https://github.com/user-attachments/assets/10dc83bc-dba6-4952-a2d3-0b18204258af" /> <br><br>
 
 **Objective:** Determine how the payload was initially launched.
 
@@ -69,7 +69,7 @@ DeviceProcessEvents
 | order by TimeGenerated asc
 ```
 <br>
-<img width="1452" height="250" alt="image" src="https://github.com/user-attachments/assets/3fff5c9f-702b-4e43-b4fc-96986236c538" /> <br><br>
+<img width="1282" height="207" alt="image" src="https://github.com/user-attachments/assets/c2a6e593-c5cd-4788-9ad9-d733b3cdce55" /> <br><br>
 
 **Objective:** The payload created a child process for further activity.
 
@@ -135,7 +135,7 @@ DeviceNetworkEvents
 | order by TimeGenerated asc
 ```
 <br>
-<img width="1121" height="151" alt="Flag " src="https://github.com/user-attachments/assets/1a4bce11-56c3-4b79-a3ec-4129bb790482" /> <br><br>
+<img width="1021" height="151" alt="Flag " src="https://github.com/user-attachments/assets/1a4bce11-56c3-4b79-a3ec-4129bb790482" /> <br><br>
 
 **Objective:** Additional payloads were hosted externally.
 
@@ -151,11 +151,113 @@ DeviceNetworkEvents
 | sort by TimeGenerated asc
 ```
 <br>
-<img width="2500" height="2000" alt="image" src="https://github.com/user-attachments/assets/66760694-8956-4473-a4f1-552cd973f3c5" />
+<img width="882" height="85" alt="image" src="https://github.com/user-attachments/assets/29574243-f496-43ee-a964-e94db2343dd7" />
 
 ---
 
 ***SECTION 3:*** ***CREDENTIAL ACCESS***
+
+**Objective:** The attacker targeted local credential stores.
+
+**Flag:** `SAM, SYSTEM`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("reg.exe")
+| where ProcessCommandLine has_any ("save")
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1172" height="127" alt="image" src="https://github.com/user-attachments/assets/3a782800-9079-43b2-ad89-96b431169bc8" /> <br><br>
+
+**Objective:** Extracted data was saved locally before exfiltration.
+
+**Flag:** `C:\Users\Public\`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("reg.exe")
+| where ProcessCommandLine has_any ("save")
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1172" height="127" alt="image" src="https://github.com/user-attachments/assets/3a782800-9079-43b2-ad89-96b431169bc8" /> <br><br>
+
+**Objective:** Credential extraction was performed under a specific user context.
+
+**Flag:** `sophie.turner`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("reg.exe")
+| where ProcessCommandLine has_any ("save")
+| project TimeGenerated, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1287" height="122" alt="image" src="https://github.com/user-attachments/assets/7929af2c-c26b-4e35-8e92-b412a688d11a" /> <br><br>
+
+---
+
+***SECTION 4:*** ***DISCOVERY***
+
+**Objective:** The attacker confirmed their identity after initial access.
+
+**Flag:** `whoami.exe`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("whoami", "localgroup", "view")
+| project TimeGenerated, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1085" height="97" alt="image" src="https://github.com/user-attachments/assets/0161b507-d2f0-4277-8faa-ce30958ffe61" /> <br><br>
+
+**Objective:** The attacker enumerated network resources.
+
+**Flag:** `net.exe view`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("whoami", "localgroup", "view")
+| project TimeGenerated, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1017" height="80" alt="image" src="https://github.com/user-attachments/assets/357166b1-1bb7-4ccd-be51-02b0f8adff3e" /> <br><br>
+
+**Objective:** The attacker enumerated privileged local group membership.
+
+**Flag:** `administrators`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("whoami", "localgroup", "view")
+| project TimeGenerated, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1125" height="82" alt="image" src="https://github.com/user-attachments/assets/2a892075-0acc-4662-808e-26156ce87593" /> <br><br>
+
+---
+
+***SECTION 5: PERSISTENCE - REMOTE TOOL***
+
 
 
 
