@@ -25,7 +25,7 @@
 
 ### **KQL Queries Used:**
 
-***SECTION 1:***  ***INITIAL ACCESS***
+***SECTION 1: INITIAL ACCESS***
 
 **Objective:** Identify the file that started the infection chain.
 
@@ -103,7 +103,7 @@ DeviceProcessEvents
 
 ---
 
-***SECTION 2:***  ***COMMAND & CONTROL***
+***SECTION 2: COMMAND & CONTROL***
 
 **Objective:** The payload established outbound connections.
 
@@ -155,7 +155,7 @@ DeviceNetworkEvents
 
 ---
 
-***SECTION 3:*** ***CREDENTIAL ACCESS***
+***SECTION 3: CREDENTIAL ACCESS***
 
 **Objective:** The attacker targeted local credential stores.
 
@@ -207,7 +207,7 @@ DeviceProcessEvents
 
 ---
 
-***SECTION 4:*** ***DISCOVERY***
+***SECTION 4: DISCOVERY***
 
 **Objective:** The attacker confirmed their identity after initial access.
 
@@ -258,6 +258,71 @@ DeviceProcessEvents
 
 ***SECTION 5: PERSISTENCE - REMOTE TOOL***
 
+**Objective:** A legitimate remote administration tool was deployed for ongoing access.
+
+**Flag:** `AnyDesk.exe`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName has_any (
+    "teamviewer", "anydesk", "screenconnect", "connectwise",
+    "splashtop", "aeroadmin", "logmein", "ngrok",
+    "rustdesk", "dwagent", "ultravnc", "tightvnc",
+    "ammyy", "zohoassist"
+)
+| project TimeGenerated, DeviceName, FileName, FolderPath, InitiatingProcessFileName, ProcessCommandLine
+| order by TimeGenerated asc
+```
+<br>
+<img width="1258" height="115" alt="image" src="https://github.com/user-attachments/assets/d94d010e-27dc-4f13-831e-772cac7ab629" /> <br><br>
+
+**Objective:** Identify the SHA256 hash of the remote access tool.
+
+**Flag:** `f42b635d93720d1624c74121b83794d706d4d064bee027650698025703d20532`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("AnyDesk")
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine, SHA256
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1266" height="112" alt="image" src="https://github.com/user-attachments/assets/30c09a4c-f019-40dd-a512-bff1f8af1f07" /> <br><br>
+
+**Objective:** The tool was downloaded using a native Windows binary.
+
+**Flag:** `certutil.exe`
+
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("AnyDesk")
+| where ProcessCommandLine has_any ("download")
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1236" height="85" alt="image" src="https://github.com/user-attachments/assets/db7478eb-fcc0-4a4d-b049-f8b5a2355184" /> <br><br>
+
+**Objective:** After installation, a configuration file was accessed.
+
+**Flag:** `C:\Users\Sophie.Turner\AppData\Roaming\AnyDesk\system.conf"`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("AnyDesk")
+| project TimeGenerated, DeviceName, FileName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1316" height="63" alt="image" src="https://github.com/user-attachments/assets/1a86580d-215c-4834-a51a-9766309f1542" /> <br><br>
 
 
 
