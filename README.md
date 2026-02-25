@@ -470,6 +470,30 @@ DeviceProcessEvents
 
 ---
 
+***SECTION 7: PERSISTENCE - SCHEDULED TASK***
+
+**Objective:** A scheduled task was created for persistence.
+
+**Flag:** `MicrosoftEdgeUpdateCheck`
+
+```
+DeviceProcessEvents
+| where DeviceName =~ "as-pc2"
+| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where FileName =~ "schtasks.exe"
+| where ProcessCommandLine has_any ("/Create")
+| project TimeGenerated, DeviceName, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1007" height="92" alt="image" src="https://github.com/user-attachments/assets/23274792-a02b-4747-bcb5-8d5824c1e1e0" /> <br><br>
+
+**Objective:** The persistence payload was renamed to avoid detection.
+
+**Flag:** `RuntimeBroker.exe`
+
+```
+
 
 
 
