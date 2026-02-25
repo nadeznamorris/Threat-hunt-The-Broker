@@ -16,7 +16,7 @@
 
 ### **Key Indicators of Compromise (IOCs):**
 
-- **Attack Source IP:** 
+- **Attack Source IP:** `104.21.30.237`
 - **Compromised Account:** `as-pc1`
 - **Malicious File:** `notepad.exe`
 - **Persistence Mechanism:** 
@@ -203,7 +203,7 @@ DeviceProcessEvents
 | sort by TimeGenerated asc
 ```
 <br>
-<img width="1287" height="122" alt="image" src="https://github.com/user-attachments/assets/7929af2c-c26b-4e35-8e92-b412a688d11a" /> <br><br>
+<img width="1287" height="122" alt="image" src="https://github.com/user-attachments/assets/7929af2c-c26b-4e35-8e92-b412a688d11a" />
 
 ---
 
@@ -252,7 +252,7 @@ DeviceProcessEvents
 | sort by TimeGenerated asc
 ```
 <br>
-<img width="1125" height="82" alt="image" src="https://github.com/user-attachments/assets/2a892075-0acc-4662-808e-26156ce87593" /> <br><br>
+<img width="1125" height="82" alt="image" src="https://github.com/user-attachments/assets/2a892075-0acc-4662-808e-26156ce87593" />
 
 ---
 
@@ -324,7 +324,104 @@ DeviceProcessEvents
 <br>
 <img width="1316" height="63" alt="image" src="https://github.com/user-attachments/assets/1a86580d-215c-4834-a51a-9766309f1542" /> <br><br>
 
+**Objective:** Unattended access was configured for the remote tool.
 
+**Flag:** `intrud3r!`
 
+```
+DeviceProcessEvents
+| where DeviceName == "as-pc1"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where InitiatingProcessCommandLine has_any ("daniel")
+| project TimeGenerated, DeviceName, ActionType, FileName, ProcessCommandLine
+| order by TimeGenerated asc
+```
+<br>
+<img width="1210" height="95" alt="image" src="https://github.com/user-attachments/assets/74b49bdc-5233-48fc-9dbc-38e9e782bbf9" /> <br><br>
+
+**Objective:** The remote tool was installed across the environment.
+
+**Flag:** `as-pc1, as-srv, as-pc2`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName =~ "AnyDesk.exe"
+| distinct DeviceName
+```
+<br>
+<img width="262" height="147" alt="image" src="https://github.com/user-attachments/assets/55286957-c48a-4786-9a3a-3e97bc340f59" />
+
+---
+
+***SECTION 6: LATERAL MOVEMENT***
+
+**Objective:** The attacker attempted remote execution methods that failed.
+
+**Flag:** `WMIC.exe, PsExec.exe`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName in~ ("psexec.exe","wmic.exe","winrs.exe","schtasks.exe","sc.exe")
+| project TimeGenerated, DeviceName, FileName, ActionType, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1182" height="133" alt="image" src="https://github.com/user-attachments/assets/756a736e-2a8b-43b6-91ac-171dba3f0d77" /> <br><br>
+
+**Objective:** Remote execution was attempted against a specific system.
+
+**Flag:** `AS-PC2`
+
+```
+DeviceProcessEvents
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName in~ ("wmic.exe","psexec.exe")
+| where ProcessCommandLine has_any ("/node:","\\\\")
+| project TimeGenerated, FileName, ProcessCommandLine
+```
+<br>
+<img width="852" height="77" alt="image" src="https://github.com/user-attachments/assets/4e467a25-8767-472e-9930-88efc0b19f14" /> <br><br>
+
+**Objective:** After failed attempts, a different method achieved lateral movement.
+
+**Flag:** `mstsc.exe`
+
+```
+DeviceProcessEvents
+| where DeviceName =~ "as-pc2"
+| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where FileName !in~ ("wmic.exe","psexec.exe")
+| where InitiatingProcessAccountName has_any ("david")
+| project TimeGenerated, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessAccountName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1093" height="123" alt="image" src="https://github.com/user-attachments/assets/569fd6e9-d386-4bc1-a382-5eac3a96ada6" /> <br><br>
+
+**Objective:** The attacker moved through the environment in a specific sequence.
+
+**Flag:** `as-pc1 > as-pc2 > as-srv`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName =~ "AnyDesk.exe"
+| summarize FirstExec=min(TimeGenerated) by DeviceName
+| sort by FirstExec asc
+| project DeviceName, FirstExec
+```
+<br>
+<img width="392" height="147" alt="image" src="https://github.com/user-attachments/assets/32d9b35a-0891-4291-bc50-f213bfc3bfd6" /> <br><br>
+
+**Objective:** A valid account was used for successful lateral movement.
+
+**Flag:** david.mitchell
+
+```
 
 
