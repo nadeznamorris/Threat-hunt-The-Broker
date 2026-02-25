@@ -144,7 +144,7 @@ DeviceNetworkEvents
 ```
 DeviceNetworkEvents
 | where DeviceName == "as-pc2"
-| where TimeGenerated between (datetime(2026-01-14) .. datetime(2026-01-31))
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
 | where isnotempty(RemoteUrl)
 | where InitiatingProcessCommandLine has_any ("daniel")
 | project TimeGenerated, DeviceName, InitiatingProcessFileName, RemoteUrl, InitiatingProcessCommandLine
@@ -393,7 +393,7 @@ DeviceProcessEvents
 ```
 DeviceProcessEvents
 | where DeviceName =~ "as-pc2"
-| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
 | where FileName !in~ ("wmic.exe","psexec.exe")
 | where InitiatingProcessAccountName has_any ("david")
 | project TimeGenerated, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessAccountName
@@ -420,8 +420,56 @@ DeviceProcessEvents
 
 **Objective:** A valid account was used for successful lateral movement.
 
-**Flag:** david.mitchell
+**Flag:** `david.mitchell`
 
 ```
+DeviceLogonEvents
+| where DeviceName =~ "as-pc2"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where LogonType == "RemoteInteractive"
+| where ActionType == "LogonSuccess"
+| project TimeGenerated, AccountName, RemoteIP, LogonType
+| sort by TimeGenerated asc
+```
+<br>
+<img width="692" height="136" alt="image" src="https://github.com/user-attachments/assets/eb909bd4-7856-4574-83d3-df46398f5b26" /> <br><br>
+
+**Objective:** A disabled account was enabled for further access.
+
+**Flag:** `/active:yes`
+
+```
+DeviceProcessEvents
+| where DeviceName =~ "as-pc2"
+| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where FileName =~ "net.exe"
+| where ProcessCommandLine has_any ("user")
+| where ProcessCommandLine has_any ("active")
+| project TimeGenerated, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="867" height="100" alt="image" src="https://github.com/user-attachments/assets/376165aa-708d-4e91-ae62-41c2d68086c1" /> <br><br>
+
+**Objective:** The account activation was performed by a specific user.
+
+**Flag:** `david.mitchell`
+
+```
+DeviceProcessEvents
+| where DeviceName =~ "as-pc2"
+| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where FileName =~ "net.exe"
+| where ProcessCommandLine has_any ("user")
+| where ProcessCommandLine has_any ("active")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="975" height="105" alt="image" src="https://github.com/user-attachments/assets/48320e27-0421-4653-903e-2df2a01c2bcb" /> <br><br>
+
+---
+
+
 
 
