@@ -276,7 +276,7 @@ DeviceProcessEvents
 | order by TimeGenerated asc
 ```
 <br>
-<img width="1258" height="115" alt="image" src="https://github.com/user-attachments/assets/d94d010e-27dc-4f13-831e-772cac7ab629" /> <br><br>
+<img width="880" height="150" alt="image" src="https://github.com/user-attachments/assets/69f20eeb-bfe9-4b81-beb1-df20b101b039" /> <br><br>
 
 **Objective:** Identify the SHA256 hash of the remote access tool.
 
@@ -441,7 +441,7 @@ DeviceLogonEvents
 ```
 DeviceProcessEvents
 | where DeviceName =~ "as-pc2"
-| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
 | where FileName =~ "net.exe"
 | where ProcessCommandLine has_any ("user")
 | where ProcessCommandLine has_any ("active")
@@ -458,7 +458,7 @@ DeviceProcessEvents
 ```
 DeviceProcessEvents
 | where DeviceName =~ "as-pc2"
-| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
 | where FileName =~ "net.exe"
 | where ProcessCommandLine has_any ("user")
 | where ProcessCommandLine has_any ("active")
@@ -479,7 +479,7 @@ DeviceProcessEvents
 ```
 DeviceProcessEvents
 | where DeviceName =~ "as-pc2"
-| where TimeGenerated between (datetime(2026-01-01) .. datetime(2026-01-31))
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
 | where FileName =~ "schtasks.exe"
 | where ProcessCommandLine has_any ("/Create")
 | project TimeGenerated, DeviceName, ProcessCommandLine
@@ -491,6 +491,170 @@ DeviceProcessEvents
 **Objective:** The persistence payload was renamed to avoid detection.
 
 **Flag:** `RuntimeBroker.exe`
+
+```
+DeviceProcessEvents
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where DeviceName =~ "as-pc2"
+  and ProcessCommandLine has_all ("schtasks.exe", "/create")
+| extend
+    TaskName = extract(@"/tn\s+([^\s]+)", 1, ProcessCommandLine),
+    TaskRun  = extract(@"/tr\s+([^\s]+)", 1, ProcessCommandLine)
+| project TimeGenerated, TaskName, TaskRun
+```
+<br>
+<img width="767" height="78" alt="image" src="https://github.com/user-attachments/assets/d090dea9-b9f1-4bbb-a0b6-8585a1520d54" /> <br><br>
+
+**Objective:** The persistence payload shares a hash with another file in the investigation.
+
+**Flag:** `48b97fd91946e81e3e7742b3554585360551551cbf9398e1f34f4bc4eac3a6b5`
+
+```
+DeviceFileEvents
+| where DeviceName == "as-pc2"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName =~ "RuntimeBroker.exe"
+| where isnotempty(SHA256)
+| project TimeGenerated, DeviceName, FileName, FolderPath, SHA256
+| order by TimeGenerated asc
+```
+<br>
+<img width="1230" height="96" alt="image" src="https://github.com/user-attachments/assets/acc9eb4b-d42e-4d41-a9b5-b8c4f46ea9a1" /> <br><br>
+
+**Objective:** A new local account was created for future access.
+
+**Flag:** `svc_backup`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName =~ "net.exe"
+| where ProcessCommandLine has_any ("user")
+| where ProcessCommandLine has_any ("/add")
+| project TimeGenerated, DeviceName, FolderPath, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="932" height="91" alt="image" src="https://github.com/user-attachments/assets/e0a2be39-8a5e-4143-8bb3-1f81b18d38c6" />
+
+---
+
+***SECTION 8: DATA ACCESS***
+
+**Objective:** A sensitive document was accessed on the file server.
+
+**Flag:** `BACS_Payments_Dec2025.ods`
+
+```
+DeviceFileEvents
+| where DeviceName == "as-pc2"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FolderPath has "\\\\"
+| project TimeGenerated, DeviceName, FileName, FolderPath, InitiatingProcessFileName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1141" height="91" alt="image" src="https://github.com/user-attachments/assets/47830546-60a3-4f92-b680-83a568f6592a" /> <br><br>
+
+**Objective:** The document was opened for editing, not just viewing.
+
+**Flag:** `.~lock.BACS_Payments_Dec2025.ods#`
+
+```
+DeviceFileEvents
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName has "BACS_Payments"
+| project TimeGenerated, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessAccountName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1218" height="147" alt="image" src="https://github.com/user-attachments/assets/55ef6ba7-4f3e-4fea-8750-01ba268a528e" /> <br><br>
+
+**Objective:** The document was accessed from a specific workstation.
+
+**Flag:** `as-pc2`
+
+```
+DeviceFileEvents
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where FileName has "BACS_Payments"
+| project TimeGenerated, DeviceName, ActionType, FileName, FolderPath, InitiatingProcessAccountName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1098" height="82" alt="image" src="https://github.com/user-attachments/assets/69ae0eaf-6a45-4a5e-bda7-bd5a9fd1c4d2" /> <br><br>
+
+**Objective:** Data was archived before potential exfiltration.
+
+**Flag:** `Shares.7z`
+
+```
+DeviceFileEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ActionType == "FileCreated"
+| where FileName has_any (".zip" ".rar", ".7z")
+| project TimeGenerated, DeviceName, FileName, FolderPath, InitiatingProcessFileName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="998" height="86" alt="image" src="https://github.com/user-attachments/assets/d3a81087-87fc-41a3-86f6-83b2c2ae31c6" /> <br><br>
+
+**Objective:** Identify the SHA256 hash of the staged archive.
+
+**Flag:** `6886c0a2e59792e69df94d2cf6ae62c2364fda50a23ab44317548895020ab048`
+
+```
+DeviceFileEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ActionType == "FileCreated"
+| where FileName has_any (".zip" ".rar", ".7z")
+| project TimeGenerated, DeviceName, FileName, FolderPath, SHA256
+| sort by TimeGenerated asc
+```
+<br>
+<img width="1151" height="87" alt="image" src="https://github.com/user-attachments/assets/d8bea8b3-743a-4fa3-8b1e-6b6d2097a46d" />
+
+---
+
+***SECTION 9: ANTI-FORENSICS & MEMORY***
+
+**Objective:** The attacker cleared logs to cover their tracks.
+
+**Flag:** `Security, System`
+
+```
+DeviceProcessEvents
+| where DeviceName startswith "as-"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where ProcessCommandLine has_any ("cl ")
+| where FileName has_any ("wevtutil")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine
+| sort by TimeGenerated asc
+```
+<br>
+<img width="878" height="112" alt="image" src="https://github.com/user-attachments/assets/a32a63d2-b846-488f-bff1-bf92514434f5" /> <br><br>
+
+**Objective:** Evidence of reflective code loading was captured.
+
+**Flag:** `ClrUnbackedModuleLoaded`
+
+```
+DeviceEvents
+| where DeviceName == "as-pc2"
+| where TimeGenerated between (datetime(2026-01-15) .. datetime(2026-01-31))
+| where InitiatingProcessFileName endswith ".exe"
+| project TimeGenerated, ActionType, InitiatingProcessFileName
+| sort by TimeGenerated asc
+```
+<br>
+<img width="902" height="90" alt="image" src="https://github.com/user-attachments/assets/f99080ca-7366-48c3-befc-ab78dd17a9cb" /> <br><br>
+
+**Objective:** A credential theft tool was loaded directly into memory.
+
+**Flag:** `SharpChrome`
 
 ```
 
