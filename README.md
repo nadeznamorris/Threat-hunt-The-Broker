@@ -38,7 +38,7 @@ DeviceProcessEvents
 | project TimeGenerated, DeviceName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessParentFileName
 | order by TimeGenerated asc
 ``` 
-<img width="1267" height="142" alt="image" src="https://github.com/user-attachments/assets/da2bb4c4-8db1-4ba6-a037-2c5470f2aa09" /> <br>
+<img width="1300" height="142" alt="image" src="https://github.com/user-attachments/assets/da2bb4c4-8db1-4ba6-a037-2c5470f2aa09" /> <br>
 
 **Objective:** Identify the SHA256 hash of the initial payload.
 
