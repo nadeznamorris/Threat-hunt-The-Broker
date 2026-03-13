@@ -642,3 +642,14 @@ DeviceEvents
 
 ---
 
+## 2. Investigation Summary — Ashford Sterling Recruitment
+
+A targeted intrusion against Ashford Sterling Recruitment's internal environment was initiated via a socially engineered malicious file disguised as a CV. A file named `daniel_richardson_cv.pdf.exe` was delivered to workstation `as-pc1` and executed manually by the user through `explorer.exe`. The payload (SHA256: `48b97fd91946e81e3e7742b3554585360551551cbf9398e1f34f4bc4eac3a6b5`) spawned `notepad.exe` with empty arguments (`notepad.exe ""`) as a hollowed host process, established C2 communications to `cdn.cloud-endpoint.net`, and downloaded secondary payloads from `sync.cloud-endpoint.net`.
+
+The attacker operating under the compromised context of `sophie.turner` dumped credential material from the `SAM` and `SYSTEM` registry hives to `C:\Users\Public\`, then conducted post-exploitation enumeration using `whoami.exe`, `net.exe view`, and `net.exe localgroup administrators`. A remote access tool, `AnyDesk.exe`, was downloaded via `certutil.exe` (LOLBin), configured with the password `intrud3r!` for unattended access, and deployed across three systems: `as-pc1`, `as-srv`, and `as-pc2`. Credential theft was performed in-memory via `SharpChrome`, injected into `notepad.exe` using reflective CLR loading (`ClrUnbackedModuleLoaded`).
+
+Lateral movement from `as-pc1` to `as-pc2` was achieved via RDP (`mstsc.exe`) using the stolen credentials of `david.mitchell`, after failed attempts with `WMIC.exe` and `PsExec.exe`. The attacker then progressed to `as-srv`, completing the movement chain `as-pc1 → as-pc2 → as-srv`. On `as-pc2`, persistence was established via a scheduled task named `MicrosoftEdgeUpdateCheck`, pointing to `RuntimeBroker.exe` — a renamed copy of the original payload (matching SHA256: `48b97fd91946e81e3e7742b3554585360551551cbf9398e1f34f4bc4eac3a6b5`). A backdoor local account `svc_backup` was created, and the built-in Administrator account was re-enabled via `net user /active:yes` under `david.mitchell`'s context.
+
+The attacker accessed the financial document `BACS_Payments_Dec2025.ods` from a network share via `as-pc2`, opening it for editing (evidenced by the LibreOffice lock file `.~lock.BACS_Payments_Dec2025.ods#`). Network share content was archived into `Shares.7z` (SHA256: `6886c0a2e59792e69df94d2cf6ae62c2364fda50a23ab44317548895020ab048`) in preparation for exfiltration. Finally, the attacker cleared `Security` and `System` event logs via `wevtutil.exe` to hinder forensic investigation.
+
+----
