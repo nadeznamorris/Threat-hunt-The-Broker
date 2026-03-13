@@ -653,3 +653,54 @@ Lateral movement from `as-pc1` to `as-pc2` was achieved via RDP (`mstsc.exe`) us
 The attacker accessed the financial document `BACS_Payments_Dec2025.ods` from a network share via `as-pc2`, opening it for editing (evidenced by the LibreOffice lock file `.~lock.BACS_Payments_Dec2025.ods#`). Network share content was archived into `Shares.7z` (SHA256: `6886c0a2e59792e69df94d2cf6ae62c2364fda50a23ab44317548895020ab048`) in preparation for exfiltration. Finally, the attacker cleared `Security` and `System` event logs via `wevtutil.exe` to hinder forensic investigation.
 
 ----
+
+## 3. Recommendations
+
+### Immediate Actions Needed:
+
+**1. Isolate all affected systems** — Take as-pc1, as-pc2, and as-srv off the network immediately to prevent further lateral movement, C2 communication, or exfiltration activity.
+
+**2. Disable and reset compromised accounts** — Disable sophie.turner, david.mitchell, and the newly created svc_backup account. Reset passwords for all three and audit any other accounts that may have been accessed or modified during the intrusion window.
+
+**3. Block C2 domains at the firewall/DNS level** — Immediately blacklist cdn.cloud-endpoint.net and sync.cloud-endpoint.net across all network egress points and DNS resolvers to sever any remaining attacker communication channels
+
+### Short-term Improvements (1–30 days):
+
+**1. Remove all attacker persistence mechanisms** — Delete the MicrosoftEdgeUpdateCheck scheduled task, remove RuntimeBroker.exe and AnyDesk.exe from all affected systems, re-disable the built-in Administrator account, and delete the svc_backup local account across the entire as- environment.
+
+**2. Enforce application whitelisting and block dual-extension executables** — Configure Windows Defender Application Control (WDAC) or AppLocker to prevent execution of files with double extensions such as .pdf.exe. Additionally, block or alert on execution of known LOLBins (certutil.exe, wevtutil.exe, reg.exe) when used outside of approved administrative contexts.
+
+**3. Enforce MFA across all user accounts and remote access methods** — Given that stolen credentials (david.mitchell) were sufficient for successful RDP lateral movement, Multi-Factor Authentication must be enforced on all accounts, particularly for Remote Desktop Protocol and any externally accessible services
+
+### Long-term Security Enhancements:
+
+**1. Implement a Privileged Access Management (PAM) solution** — The attacker was able to dump the SAM and SYSTEM hives, harvest credentials, and move laterally using valid accounts with minimal resistance. A PAM solution with just-in-time privilege access, credential vaulting, and session recording would significantly limit the blast radius of credential compromise.
+
+**2. Deploy a network segmentation and zero-trust architecture** — The attacker moved freely from a workstation (as-pc1) to another workstation (as-pc2) and then to the server (as-srv) without any apparent network-level barriers. Segmenting workstations from servers and enforcing east-west traffic controls would contain future intrusions to the initial point of compromise.
+
+**3. Establish a Security Awareness Training programme with phishing and social engineering simulations** — The entire intrusion chain began with a user executing a file named daniel_richardson_cv.pdf.exe. Regular training on double-extension tricks, unsolicited CV files, and safe file handling — combined with simulated phishing exercises — would reduce the likelihood of successful initial access via this vector.
+
+### Detection Improvements:
+
+**1. Alert on double-extension executable files** — Create detection rules in Microsoft Defender / Sentinel that trigger whenever a file matching the pattern `*.pdf.exe`, `*.doc.exe`, or similar double-extension combinations is created or executed anywhere in the environment.
+
+**2. Alert on `certutil.exe` used for file downloads** — Any execution of `certutil.exe` with `-urlcache`, `-split`, or `-f` arguments should generate a high-priority alert, as legitimate certificate operations do not require downloading external files.
+
+**3. Alert on `reg.exe save` targeting SAM or SYSTEM hives** — Execution of `reg.exe` with the `save` argument referencing `SAM`, `SYSTEM`, or `SECURITY` should immediately trigger a critical alert, as this has no legitimate day-to-day use outside of forensic or backup contexts.
+
+**4. Alert on `notepad.exe` spawned with empty or unusual arguments** — `notepad.exe ""` or `notepad.exe` launched by a non-user process should trigger a process injection alert, as this pattern is a strong indicator of process hollowing.
+
+**5. Alert on `ClrUnbackedModuleLoaded` events** — This event type is a direct indicator of reflective .NET assembly loading (fileless malware). Any occurrence should generate an alert and be automatically correlated with the initiating process for triage.
+
+**6. Alert on remote access tools installed or executed outside of approved software inventory** — `AnyDesk.exe`, `TeamViewer`, and similar tools should be tracked against an approved software list. Any execution outside the approved list should trigger an alert, particularly when downloaded via LOLBins like certutil.exe.
+
+**7. Alert on scheduled task creation using masquerading names** — Detection rules should flag `schtasks.exe /Create` where the task name closely resembles known Windows or Microsoft product names (e.g. `MicrosoftEdgeUpdateCheck`) but the executing binary path is outside of expected system directories.
+
+**8. Alert on `wevtutil.exe cl` execution** — Clearing of event logs via `wevtutil` is rarely legitimate outside of authorised maintenance windows. Any execution of `wevtutil cl` should generate a critical alert and the cleared log names should be captured for the record.
+
+**9. Alert on new local account creation via `net.exe /add`** — Creation of local accounts outside of an approved provisioning process should be detected and reviewed immediately. Accounts with names resembling service accounts (e.g. `svc_*`) created interactively are a particular red flag.
+
+**10. Correlate `LogonType 10` (RemoteInteractive) events with prior failed lateral movement attempts** — A successful RDP logon that is preceded by failed `WMIC` or `PsExec` attempts from the same source host within a short time window should trigger a composite lateral movement alert, as this pattern — failed execution attempts followed by RDP success — was the exact sequence observed in this incident.
+
+---
+
