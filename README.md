@@ -21,7 +21,7 @@
 - **Malicious File:** `daniel_richardson_cv.pdf.exe`, `RuntimeBroker.exe`, `AnyDesk.exe`, `Shares.7z`
 - **Persistence Mechanism:** Scheduled task, Local backdoor account, Re-enabled built-in Administrator account, AnyDesk.exe configured with unattended password
 - **C2 Server:** `cdn.cloud-endpoint.net` (primary C2), `sync.cloud-endpoint.net` (secondary payload hosting)
-- **Exfiltration Destination:** 
+- **Exfiltration Destination:** `sync.cloud-endpoint.net`
 
 ### **KQL Queries Used:**
 
@@ -658,27 +658,27 @@ The attacker accessed the financial document `BACS_Payments_Dec2025.ods` from a 
 
 ### Immediate Actions Needed:
 
-**1. Isolate all affected systems** — Take as-pc1, as-pc2, and as-srv off the network immediately to prevent further lateral movement, C2 communication, or exfiltration activity.
+**1. Isolate all affected systems** — Take `as-pc1`, `as-pc2`, and `as-srv` off the network immediately to prevent further lateral movement, C2 communication, or exfiltration activity.
 
-**2. Disable and reset compromised accounts** — Disable sophie.turner, david.mitchell, and the newly created svc_backup account. Reset passwords for all three and audit any other accounts that may have been accessed or modified during the intrusion window.
+**2. Disable and reset compromised accounts** — Disable `sophie.turner`, `david.mitchell`, and the newly created `svc_backup` account. Reset passwords for all three and audit any other accounts that may have been accessed or modified during the intrusion window.
 
-**3. Block C2 domains at the firewall/DNS level** — Immediately blacklist cdn.cloud-endpoint.net and sync.cloud-endpoint.net across all network egress points and DNS resolvers to sever any remaining attacker communication channels
+**3. Block C2 domains at the firewall/DNS level** — Immediately blacklist `cdn.cloud-endpoint.net` and `sync.cloud-endpoint.net` across all network egress points and DNS resolvers to sever any remaining attacker communication channels
 
 ### Short-term Improvements (1–30 days):
 
-**1. Remove all attacker persistence mechanisms** — Delete the MicrosoftEdgeUpdateCheck scheduled task, remove RuntimeBroker.exe and AnyDesk.exe from all affected systems, re-disable the built-in Administrator account, and delete the svc_backup local account across the entire as- environment.
+**1. Remove all attacker persistence mechanisms** — Delete the `MicrosoftEdgeUpdateCheck` scheduled task, remove `RuntimeBroker.exe` and `AnyDesk.exe` from all affected systems, re-disable the built-in Administrator account, and delete the `svc_backup` local account across the entire `as-` environment.
 
-**2. Enforce application whitelisting and block dual-extension executables** — Configure Windows Defender Application Control (WDAC) or AppLocker to prevent execution of files with double extensions such as .pdf.exe. Additionally, block or alert on execution of known LOLBins (certutil.exe, wevtutil.exe, reg.exe) when used outside of approved administrative contexts.
+**2. Enforce application whitelisting and block dual-extension executables** — Configure Windows Defender Application Control (WDAC) or AppLocker to prevent execution of files with double extensions such as `.pdf.exe`. Additionally, block or alert on execution of known LOLBins (`certutil.exe`, `wevtutil.exe`, `reg.exe`) when used outside of approved administrative contexts.
 
-**3. Enforce MFA across all user accounts and remote access methods** — Given that stolen credentials (david.mitchell) were sufficient for successful RDP lateral movement, Multi-Factor Authentication must be enforced on all accounts, particularly for Remote Desktop Protocol and any externally accessible services
+**3. Enforce MFA across all user accounts and remote access methods** — Given that stolen credentials (`david.mitchell`) were sufficient for successful RDP lateral movement, Multi-Factor Authentication must be enforced on all accounts, particularly for Remote Desktop Protocol and any externally accessible services
 
 ### Long-term Security Enhancements:
 
-**1. Implement a Privileged Access Management (PAM) solution** — The attacker was able to dump the SAM and SYSTEM hives, harvest credentials, and move laterally using valid accounts with minimal resistance. A PAM solution with just-in-time privilege access, credential vaulting, and session recording would significantly limit the blast radius of credential compromise.
+**1. Implement a Privileged Access Management (PAM) solution** — The attacker was able to dump the `SAM` and `SYSTEM` hives, harvest credentials, and move laterally using valid accounts with minimal resistance. A PAM solution with just-in-time privilege access, credential vaulting, and session recording would significantly limit the blast radius of credential compromise.
 
-**2. Deploy a network segmentation and zero-trust architecture** — The attacker moved freely from a workstation (as-pc1) to another workstation (as-pc2) and then to the server (as-srv) without any apparent network-level barriers. Segmenting workstations from servers and enforcing east-west traffic controls would contain future intrusions to the initial point of compromise.
+**2. Deploy a network segmentation and zero-trust architecture** — The attacker moved freely from a workstation (`as-pc1`) to another workstation (`as-pc2`) and then to the server (`as-srv`) without any apparent network-level barriers. Segmenting workstations from servers and enforcing east-west traffic controls would contain future intrusions to the initial point of compromise.
 
-**3. Establish a Security Awareness Training programme with phishing and social engineering simulations** — The entire intrusion chain began with a user executing a file named daniel_richardson_cv.pdf.exe. Regular training on double-extension tricks, unsolicited CV files, and safe file handling — combined with simulated phishing exercises — would reduce the likelihood of successful initial access via this vector.
+**3. Establish a Security Awareness Training programme with phishing and social engineering simulations** — The entire intrusion chain began with a user executing a file named `daniel_richardson_cv.pdf.exe`. Regular training on double-extension tricks, unsolicited CV files, and safe file handling — combined with simulated phishing exercises — would reduce the likelihood of successful initial access via this vector.
 
 ### Detection Improvements:
 
