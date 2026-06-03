@@ -23,7 +23,7 @@
 - **C2 Server:** `cdn.cloud-endpoint.net` (primary C2), `sync.cloud-endpoint.net` (secondary payload hosting)
 - **Exfiltration Destination:** `sync.cloud-endpoint.net`
 
-### **KQL Queries Used:**
+---
 
 ***SECTION 1: INITIAL ACCESS***
 
